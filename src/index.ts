@@ -1,15 +1,11 @@
-import { Probot } from "probot";
+import { Probot } from "probot"
+import { handlePush } from "./events/push"
+import { handlePullRequestLabeled, handlePullRequestOpen, handlePullRequestSynchronize } from "./events/pull_request"
 
 export = (app: Probot) => {
-  app.on("issues.opened", async (context) => {
-    const issueComment = context.issue({
-      body: "Thanks for opening this issue!",
-    });
-    await context.octokit.issues.createComment(issueComment);
-  });
-  // For more information on building apps:
-  // https://probot.github.io/docs/
+    app.on("push", handlePush)
 
-  // To get your app running against GitHub, see:
-  // https://probot.github.io/docs/development/
-};
+    app.on("pull_request.opened", handlePullRequestOpen)
+    app.on("pull_request.labeled", handlePullRequestLabeled)
+    app.on("pull_request.synchronize", handlePullRequestSynchronize)
+}
