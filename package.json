@@ -1,8 +1,7 @@
 {
-  "name": "probot-example",
+  "name": "inception-controller",
   "version": "1.0.0",
   "private": true,
-  "description": "A Probot app",
   "author": "moritz <theincxption@gmail.com>",
   "license": "ISC",
   "homepage": "https://github.com/incxption/probot-example",
@@ -14,12 +13,17 @@
   "scripts": {
     "build": "tsc",
     "start": "probot run ./lib/index.js",
-    "test": "jest"
+    "test": "jest",
+    "dev": "yarn run build && yarn run start"
   },
   "dependencies": {
+    "@octokit/types": "^6.13.0",
+    "extract-zip": "^2.0.1",
+    "fs-extra": "^9.1.0",
     "probot": "^11.0.1"
   },
   "devDependencies": {
+    "@types/fs-extra": "^9.0.10",
     "@types/jest": "^26.0.19",
     "@types/node": "^14.14.19",
     "jest": "^26.6.3",
