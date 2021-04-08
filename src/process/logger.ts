@@ -7,7 +7,7 @@ export function log(command: string, level: string, message: string) {
             chalk.gray(" [") +
             level +
             chalk.gray("] ") +
-            chalk.whiteBright(message.substr(0, message.length - 2))
+            chalk.whiteBright(message.substr(0, message.length - 1))
     )
 }
 
