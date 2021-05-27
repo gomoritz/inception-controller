@@ -1,4 +1,4 @@
-import { error, begin, info, end } from "./logger"
+import { error, begin, info, end } from "./process-logger"
 import { exec } from "child_process"
 
 export function execute(command: string, workingDir: string): Promise<void> {
@@ -8,8 +8,11 @@ export function execute(command: string, workingDir: string): Promise<void> {
     childProcess.stdout!.on("data", (data) => info(command, data))
     childProcess.stderr!.on("data", (data) => error(command, data))
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         childProcess.on("close", () => {
+            if (childProcess.exitCode != 0) {
+                reject("Invalid exit code: " + childProcess.exitCode)
+            }
             end(command)
             resolve()
         })

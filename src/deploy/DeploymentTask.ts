@@ -5,6 +5,7 @@ import { Context } from "probot"
 import { Config } from "../types/config"
 import BuildTask from "../build/BuildTask"
 import queue from "../build/queue"
+import logger from "../logger/logger"
 
 export default class DeploymentTask {
     private readonly type: "preview" | "production"
@@ -20,6 +21,8 @@ export default class DeploymentTask {
     }
 
     async run() {
+        logger.debug("Running deployment task with previewId %s", this.previewId)
+
         await this.createDeployment()
         await this.updateState("queued")
 
@@ -39,6 +42,7 @@ export default class DeploymentTask {
     }
 
     private async createDeployment() {
+        logger.debug("Creating deployment on GitHub")
         // noinspection TypeScriptValidateJSTypes
         const { data: deployment } = await this.context.octokit.repos.createDeployment(
             this.context.repo({
@@ -55,6 +59,7 @@ export default class DeploymentTask {
     }
 
     private async updateState(state: "queued" | "failure" | "pending" | "in_progress" | "success") {
+        logger.debug("Updating deployment state to %s", state)
         const environmentUrl = this.previewId
             ? this.config.previewUrl.replace("%0", this.previewId)
             : this.config.productionUrl

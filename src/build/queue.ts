@@ -1,4 +1,5 @@
 import BuildTask from "./BuildTask"
+import logger from "../logger/logger"
 
 const items: BuildTask[] = []
 
@@ -10,18 +11,21 @@ export default function queue(task: BuildTask, onStart: () => void, onFinish: ()
 
     items.push(task)
     if (items.length === 1) {
+        logger.debug("Build tasked queued and instantly executed")
         // noinspection JSIgnoredPromiseFromCall
         runNext()
+    } else {
+        logger.debug("Build task queued")
     }
 }
 
 async function runNext() {
     const next = items.find((task) => task.state === "queued")
     if (next) {
-        console.log("Running next build task " + next.identifier)
+        logger.info("Running next build task %s", next.identifier)
         await run(next)
     } else {
-        console.log("No more build tasks in queue")
+        logger.info("No more build tasks in queue")
     }
 }
 
@@ -34,8 +38,8 @@ async function run(task: BuildTask) {
         task.onFinish?.()
     } catch (e) {
         task.onError?.()
-        console.error("Failed to run build task " + task.identifier)
-        console.error(e)
+        logger.error("Failed to run build task %s", task.identifier)
+        logger.error(e)
     } finally {
         items.splice(items.indexOf(task), 1)
         await runNext()
