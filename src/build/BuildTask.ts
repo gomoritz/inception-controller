@@ -135,6 +135,6 @@ export default class BuildTask {
     }
 
     private wdf(path: string): string {
-        return "*" + path.replace(this.controllerWorkingDir, "")
+        return path.replace(this.controllerWorkingDir, "*")
     }
 }
