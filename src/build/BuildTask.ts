@@ -10,9 +10,10 @@ import logger from "../logger/logger"
 
 export default class BuildTask {
     private octokit = this.context.octokit
+    private readonly controllerWorkingDir = process.env.WORKING_DIR ?? "/home"
 
     public state: "queued" | "running" | "finished"
-    public identifier = `${this.repositorySpec.owner}-${this.repositorySpec.repo}@${this.ref}`
+    public identifier = `${this.repositorySpec.owner}+${this.repositorySpec.repo}@${this.ref}`
 
     public onFinish: () => void
     public onStart: () => void
@@ -28,6 +29,7 @@ export default class BuildTask {
 
     async run() {
         const repositoryDir = await this.download()
+        this.injectTemplate(repositoryDir)
         const buildDir = await this.build(repositoryDir)
         await this.copy(buildDir)
         this.cleanup(repositoryDir)
@@ -41,13 +43,13 @@ export default class BuildTask {
         })
 
         const workingDir = path.join(
-            process.env.WORKING_DIR ?? "/home",
+            this.controllerWorkingDir,
             "build",
             this.identifier.replace("/", "_")
         )
         const downloadFile = path.join(workingDir, "zipball.zip")
-        logger.debug("Working directory is: %s", workingDir)
-        logger.debug("Downloading archive to: %s", downloadFile)
+        logger.debug("Working directory is: %s", this.wdf(workingDir))
+        logger.debug("Downloading archive to: %s", this.wdf(downloadFile))
 
         if (fs.existsSync(workingDir)) fs.rmdirSync(workingDir, { recursive: true })
 
@@ -58,8 +60,27 @@ export default class BuildTask {
         fs.rmSync(downloadFile)
 
         const repositoryDir = path.join(workingDir, fs.readdirSync(workingDir)[0])
-        logger.debug("Extracted repository into: %s", repositoryDir)
+        logger.debug("Extracted repository into: %s", this.wdf(repositoryDir))
         return repositoryDir
+    }
+
+    private injectTemplate(repositoryDir: string) {
+        const templateDir = path.join(
+            this.controllerWorkingDir,
+            "templates",
+            `${this.repositorySpec.owner}+${this.repositorySpec.repo}`
+        )
+
+        if (fs.existsSync(templateDir)) {
+            logger.debug(
+                "Copying template from %s into %s",
+                this.wdf(templateDir),
+                this.wdf(repositoryDir)
+            )
+            fse.copySync(templateDir, repositoryDir, { recursive: true, overwrite: true })
+        } else {
+            logger.debug("Found no template at %s", this.wdf(templateDir))
+        }
     }
 
     private async build(repositoryDir: string): Promise<string> {
@@ -75,7 +96,11 @@ export default class BuildTask {
         const destinationDir = this.previewId
             ? path.join(this.config.destination + "-preview", this.previewId)
             : this.config.destination
-        logger.debug("Copying build output from %s into %s", buildDir, destinationDir)
+        logger.debug(
+            "Copying build output from %s into %s",
+            this.wdf(buildDir),
+            this.wdf(destinationDir)
+        )
 
         if (fs.existsSync(destinationDir)) fs.rmdirSync(destinationDir, { recursive: true })
         fs.mkdirSync(destinationDir, { recursive: true })
@@ -86,5 +111,9 @@ export default class BuildTask {
     private cleanup(repositoryDir: string) {
         logger.debug("Cleaning up repository directory")
         fs.rmdirSync(repositoryDir, { recursive: true })
+    }
+
+    private wdf(path: string): string {
+        return "*" + path.replace(this.controllerWorkingDir, "")
     }
 }
