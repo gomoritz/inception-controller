@@ -6,7 +6,9 @@ import fse from "fs-extra"
 import extract from "extract-zip"
 import { Config } from "../types/config"
 import { execute } from "../process/process"
-import logger from "../logger/logger"
+import defaultLogger, { uncoloredCustomFormat } from "../logger/logger"
+import CallbackTransport from "./CallbackTransport"
+import { format } from "winston"
 
 export default class BuildTask {
     private octokit = this.context.octokit
@@ -17,7 +19,10 @@ export default class BuildTask {
 
     public onFinish: () => void
     public onStart: () => void
-    public onError: () => void
+    public onError: (error: any) => void
+
+    public logger = defaultLogger.child({})
+    public buildLog: string[] = []
 
     constructor(
         private repositorySpec: RepositorySpec,
@@ -25,7 +30,14 @@ export default class BuildTask {
         private config: Config,
         private context: Context,
         private previewId?: string
-    ) {}
+    ) {
+        this.logger.add(
+            new CallbackTransport({
+                format: format.combine(format.splat(), format.align(), uncoloredCustomFormat),
+                callback: (message: string) => this.buildLog.push(message)
+            })
+        )
+    }
 
     async run() {
         const repositoryDir = await this.download()
@@ -36,7 +48,7 @@ export default class BuildTask {
     }
 
     private async download(): Promise<string> {
-        logger.debug("Downloading zipball archive from repository")
+        this.logger.debug("Downloading zipball archive from repository")
         const { data: arrayBuffer } = await this.octokit.repos.downloadZipballArchive({
             ...this.repositorySpec,
             ref: this.ref
@@ -45,11 +57,11 @@ export default class BuildTask {
         const workingDir = path.join(
             this.controllerWorkingDir,
             "build",
-            this.identifier.replace("/", "_")
+            this.identifier.replaceAll("/", "_")
         )
         const downloadFile = path.join(workingDir, "zipball.zip")
-        logger.debug("Working directory is: %s", this.wdf(workingDir))
-        logger.debug("Downloading archive to: %s", this.wdf(downloadFile))
+        this.logger.debug("Working directory is: %s", this.wdf(workingDir))
+        this.logger.debug("Downloading archive to: %s", this.wdf(downloadFile))
 
         if (fs.existsSync(workingDir)) fs.rmdirSync(workingDir, { recursive: true })
 
@@ -60,7 +72,7 @@ export default class BuildTask {
         fs.rmSync(downloadFile)
 
         const repositoryDir = path.join(workingDir, fs.readdirSync(workingDir)[0])
-        logger.debug("Extracted repository into: %s", this.wdf(repositoryDir))
+        this.logger.debug("Extracted repository into: %s", this.wdf(repositoryDir))
         return repositoryDir
     }
 
@@ -72,14 +84,14 @@ export default class BuildTask {
         )
 
         if (fs.existsSync(templateDir)) {
-            logger.debug(
+            this.logger.debug(
                 "Copying template from %s into %s",
                 this.wdf(templateDir),
                 this.wdf(repositoryDir)
             )
             fse.copySync(templateDir, repositoryDir, { recursive: true, overwrite: true })
         } else {
-            logger.debug("Found no template at %s", this.wdf(templateDir))
+            this.logger.debug("Found no template at %s", this.wdf(templateDir))
         }
     }
 
@@ -88,7 +100,7 @@ export default class BuildTask {
             ? { PREVIEW_ID: this.previewId, REACT_APP_PREVIEW_ID: this.previewId }
             : {}
 
-        logger.debug(
+        this.logger.debug(
             "Executing %d build commands with environment: %s",
             this.config.commands.length,
             env
@@ -105,7 +117,7 @@ export default class BuildTask {
         const destinationDir = this.previewId
             ? path.join(this.config.destination + "-preview", this.previewId)
             : this.config.destination
-        logger.debug(
+        this.logger.debug(
             "Copying build output from %s into %s",
             this.wdf(buildDir),
             this.wdf(destinationDir)
@@ -118,7 +130,7 @@ export default class BuildTask {
     }
 
     private cleanup(repositoryDir: string) {
-        logger.debug("Cleaning up repository directory")
+        this.logger.debug("Cleaning up repository directory")
         fs.rmdirSync(repositoryDir, { recursive: true })
     }
 

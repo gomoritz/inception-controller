@@ -3,7 +3,12 @@ import logger from "../logger/logger"
 
 const items: BuildTask[] = []
 
-export default function queue(task: BuildTask, onStart: () => void, onFinish: () => void, onError: () => void) {
+export default function queue(
+    task: BuildTask,
+    onStart: () => void,
+    onFinish: () => void,
+    onError: (error: any) => void
+) {
     task.onStart = onStart
     task.onFinish = onFinish
     task.onError = onError
@@ -37,9 +42,8 @@ async function run(task: BuildTask) {
         task.state = "finished"
         task.onFinish?.()
     } catch (e) {
-        task.onError?.()
+        task.onError?.(e)
         logger.error("Failed to run build task %s", task.identifier)
-        logger.error(e)
     } finally {
         items.splice(items.indexOf(task), 1)
         await runNext()
