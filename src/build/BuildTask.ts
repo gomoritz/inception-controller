@@ -84,9 +84,18 @@ export default class BuildTask {
     }
 
     private async build(repositoryDir: string): Promise<string> {
-        logger.debug("Executing %d build commands", this.config.commands.length)
+        const env = this.previewId
+            ? { PREVIEW_ID: this.previewId, REACT_APP_PREVIEW_ID: this.previewId }
+            : undefined
+
+        logger.debug(
+            "Executing %d build commands with environment: %s",
+            this.config.commands.length,
+            env
+        )
+
         for await (const command of this.config.commands) {
-            await execute(command, repositoryDir)
+            await execute(command, repositoryDir, env)
         }
 
         return path.join(repositoryDir, this.config.buildDir)

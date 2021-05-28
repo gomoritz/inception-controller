@@ -1,10 +1,14 @@
 import { error, begin, info, end } from "./process-logger"
 import { exec } from "child_process"
 
-export function execute(command: string, workingDir: string): Promise<void> {
+export function execute(
+    command: string,
+    workingDir: string,
+    env?: NodeJS.ProcessEnv
+): Promise<void> {
     begin(command)
 
-    const childProcess = exec(command, { cwd: workingDir })
+    const childProcess = exec(command, { cwd: workingDir, env })
     childProcess.stdout!.on("data", (data) => info(command, data))
     childProcess.stderr!.on("data", (data) => error(command, data))
 
