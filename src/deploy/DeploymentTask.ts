@@ -1,4 +1,4 @@
-import { DeployParams } from "../types/deploy"
+import { DeployParams, DeployParamsPreview } from "../types/deploy"
 import { Deployment, PullRequest } from "../types/github"
 import crypto from "crypto"
 import { Context } from "probot"
@@ -6,6 +6,7 @@ import { Config } from "../types/config"
 import BuildTask from "../build/BuildTask"
 import queue from "../build/queue"
 import logger from "../logger/logger"
+import { unwatchFile } from "fs"
 
 export default class DeploymentTask {
     private readonly type: "preview" | "production"
@@ -16,7 +17,8 @@ export default class DeploymentTask {
 
     constructor(private readonly params: DeployParams, private readonly config: Config) {
         this.type = params.type
-        this.previewId = params.type === "preview" ? generatePreviewId(params.pullRequest) : undefined
+        this.previewId =
+            params.type === "preview" ? generatePreviewId(params.pullRequest) : undefined
         this.context = params.context
     }
 
@@ -37,8 +39,34 @@ export default class DeploymentTask {
             buildTask,
             () => this.updateState("in_progress"),
             () => this.updateState("success"),
-            () => this.updateState("failure")
+            (error) => {
+                buildTask.logger.error("Execution failed")
+                buildTask.logger.error(error)
+
+                this.updateState("failure")
+                if (this.type === "preview") {
+                    this.createErrorComment(error, buildTask)
+                }
+            }
         )
+    }
+
+    private createErrorComment(error: any, buildTask: BuildTask) {
+        this.context.octokit.issues.createComment({
+            ...this.params.repositorySpec,
+            issue_number: (this.params as DeployParamsPreview).pullRequest.number,
+            body:
+                "## Deployment failure\n" +
+                "Failed to deploy a preview of this pull request.\n\n" +
+                "### Error\n" +
+                "`" +
+                error +
+                "`\n\n" +
+                "### Build log\n" +
+                "```\n" +
+                buildTask.buildLog.join("\n") +
+                "\n```"
+        })
     }
 
     private async createDeployment() {
