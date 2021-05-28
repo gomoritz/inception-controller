@@ -15,8 +15,13 @@ export function execute(
     return new Promise((resolve, reject) => {
         childProcess.on("close", () => {
             if (childProcess.exitCode != 0) {
-                reject("Invalid exit code: " + childProcess.exitCode)
+                end(command, true)
+                reject(
+                    `Build command '${command}' finished with invalid exit code ${childProcess.exitCode}`
+                )
+                return
             }
+
             end(command)
             resolve()
         })

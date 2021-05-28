@@ -3,7 +3,7 @@ import logger from "../logger/logger"
 
 export function log(command: string, level: "error" | "info", message: string) {
     const lines = message.split("\n")
-    const func = level === "error" ? logger.error : logger.debug
+    const func = level === "error" ? logger.warn : logger.debug
 
     for (const line of lines) {
         if (line.length <= 1) continue
@@ -26,11 +26,12 @@ export function begin(command: string) {
     )
 }
 
-export function end(command: string) {
+export function end(command: string, withError?: boolean) {
     logger.info(
         chalk.gray("=== ") +
             chalk.white("Finished command ") +
             chalk.green(command) +
+            (withError ? chalk.white(" with error") : "") +
             chalk.gray(" ===")
     )
 }
