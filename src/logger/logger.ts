@@ -2,6 +2,20 @@ import { createLogger, format, transports } from "winston"
 import chalk from "chalk"
 import formatMeta from "./formatMeta"
 
+export const customFormat = format.printf(
+    ({ timestamp, level, message }) =>
+        chalk.gray("[") +
+        chalk.magenta(timestamp) +
+        chalk.gray("] [") +
+        level +
+        chalk.gray("] ") +
+        chalk.white(message)
+)
+
+export const uncoloredCustomFormat = format.printf(
+    ({ timestamp, level, message }) => `[${timestamp}] [${level}] ${message}`
+)
+
 const logger = createLogger({
     level: "debug",
     format: format.combine(
@@ -27,15 +41,7 @@ const logger = createLogger({
                 format.align(),
                 formatMeta({ functions: [chalk.cyan] }),
                 format.splat(),
-                format.printf(
-                    ({ timestamp, level, message }) =>
-                        chalk.gray("[") +
-                        chalk.magenta(timestamp) +
-                        chalk.gray("] [") +
-                        level +
-                        chalk.gray("] ") +
-                        chalk.white(message)
-                )
+                customFormat
             )
         })
     ]
