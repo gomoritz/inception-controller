@@ -86,7 +86,7 @@ export default class BuildTask {
     private async build(repositoryDir: string): Promise<string> {
         const env = this.previewId
             ? { PREVIEW_ID: this.previewId, REACT_APP_PREVIEW_ID: this.previewId }
-            : undefined
+            : {}
 
         logger.debug(
             "Executing %d build commands with environment: %s",

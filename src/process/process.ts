@@ -4,11 +4,11 @@ import { exec } from "child_process"
 export function execute(
     command: string,
     workingDir: string,
-    env?: NodeJS.ProcessEnv
+    env: NodeJS.ProcessEnv
 ): Promise<void> {
     begin(command)
 
-    const childProcess = exec(command, { cwd: workingDir, env })
+    const childProcess = exec(command, { cwd: workingDir, env: { ...process.env, ...env } })
     childProcess.stdout!.on("data", (data) => info(command, data))
     childProcess.stderr!.on("data", (data) => error(command, data))
 
